@@ -10,8 +10,11 @@ class Settings:
     """Application configuration settings."""
 
     BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
-    EMOJI_SIZE: int = int(os.getenv("EMOJI_SIZE", "100"))
     TEMP_DIR_PREFIX: str = "temp_"
+    MAX_COLS = 11
+    MAX_CELLS = 120
+    SELECT_PERCENTAGES = [1.0, 0.75, 0.5, 0.35, 0.25, 0.15]
+    MIN_ASPECT_RATIO = 0.30
 
     @classmethod
     def validate(cls):
@@ -20,8 +23,7 @@ class Settings:
         logger = get_logger()
 
         logger.info("Validating application settings")
-        logger.debug(f"BOT_TOKEN present: {bool(cls.BOT_TOKEN)}")
-        logger.debug(f"EMOJI_SIZE: {cls.EMOJI_SIZE}")
+        logger.info(f"BOT_TOKEN present: {bool(cls.BOT_TOKEN)}")
         logger.debug(f"TEMP_DIR_PREFIX: {cls.TEMP_DIR_PREFIX}")
 
         if not cls.BOT_TOKEN:

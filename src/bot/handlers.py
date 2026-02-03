@@ -68,6 +68,18 @@ class BotHandlers:
         logger.info(f"User {user_id} uploaded a photo")
         await self.emoji_cropper_command.handle_photo(update, context)
 
+    async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Handle incoming documents.
+
+        Args:
+            update: Telegram update object
+            context: Context for the handler
+        """
+        user_id = update.effective_user.id if update.effective_user else "Unknown"
+        logger.info(f"User {user_id} uploaded a document")
+        await self.emoji_cropper_command.handle_document(update, context)
+
     async def handle_command_callback(
         self,
         update: Update,

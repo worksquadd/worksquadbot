@@ -20,9 +20,31 @@ class EmojiCropperCommand:
     def __init__(self):
         """Initialize emoji cropper command handler."""
         logger.info("Initializing EmojiCropperCommand")
-        self.processor = ImageProcessor(settings.EMOJI_SIZE)
+        self.processor = ImageProcessor()
         self.keyboard_builder = KeyboardBuilder()
-        logger.info(f"EmojiCropperCommand initialized with emoji size: {settings.EMOJI_SIZE}")
+        logger.info(f"EmojiCropperCommand initialized with emoji size")
+
+    def _format_emoji_grid(self, emoji_ids: list, cols: int, rows: int) -> str:
+        """
+        Format custom emoji IDs into a grid layout.
+
+        Args:
+            emoji_ids: List of custom emoji IDs
+            cols: Number of columns
+            rows: Number of rows
+
+        Returns:
+            Formatted emoji grid string
+        """
+        grid_lines = []
+        for row in range(rows):
+            row_emojis = []
+            for col in range(cols):
+                idx = row * cols + col
+                if idx < len(emoji_ids):
+                    row_emojis.append(f'<tg-emoji emoji-id="{emoji_ids[idx]}">🎨</tg-emoji>')
+            grid_lines.append("".join(row_emojis))
+        return "\n".join(grid_lines)
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
@@ -75,6 +97,58 @@ class EmojiCropperCommand:
         logger.info(f"User {user_id} saving photo to: {image_path}")
         await file.download_to_drive(image_path)
         logger.info(f"User {user_id} photo downloaded successfully")
+
+        context.user_data["image_path"] = image_path
+        context.user_data["temp_dir"] = temp_dir
+
+        logger.info(f"User {user_id} getting image dimensions")
+        width, height = self.processor.get_image_dimensions(image_path)
+        logger.info(f"User {user_id} image dimensions: {width}x{height}")
+
+        logger.info(f"User {user_id} calculating suggested grid sizes")
+        suggested_grids = self.processor.suggest_grid_sizes(width, height)
+        logger.info(f"User {user_id} suggested grids: {suggested_grids}")
+
+        reply_markup = self.keyboard_builder.build_grid_selection(suggested_grids)
+
+        await update.message.reply_text(
+            strings.ASK_GRID_SIZE.format(width=width, height=height),
+            reply_markup=reply_markup
+        )
+        logger.info(f"User {user_id} presented with grid selection options")
+
+    async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Handle incoming documents for emoji cropping.
+
+        Args:
+            update: Telegram update object
+            context: Context for the handler
+        """
+        user_id = update.effective_user.id
+        logger.info(f"User {user_id} uploading document for processing")
+
+        document = update.message.document
+        mime_type = document.mime_type
+        logger.debug(f"User {user_id} document file_id: {document.file_id}, mime_type: {mime_type}, size: {document.file_size} bytes")
+
+        if mime_type not in ["image/png", "image/webp"]:
+            logger.warning(f"User {user_id} uploaded unsupported document type: {mime_type}")
+            await update.message.reply_text(strings.UNSUPPORTED_FILE_FORMAT)
+            return
+
+        logger.info(f"User {user_id} downloading document from Telegram")
+        file = await document.get_file()
+
+        temp_dir = f"{settings.TEMP_DIR_PREFIX}{user_id}"
+        os.makedirs(temp_dir, exist_ok=True)
+        logger.debug(f"User {user_id} created temp directory: {temp_dir}")
+
+        extension = "png" if mime_type == "image/png" else "webp"
+        image_path = os.path.join(temp_dir, f"input.{extension}")
+        logger.info(f"User {user_id} saving document to: {image_path}")
+        await file.download_to_drive(image_path)
+        logger.info(f"User {user_id} document downloaded successfully")
 
         context.user_data["image_path"] = image_path
         context.user_data["temp_dir"] = temp_dir
@@ -175,17 +249,22 @@ class EmojiCropperCommand:
             logger.info(f"User {user_id} creating sticker pack")
 
             sticker_creator = StickerPackCreator(context.bot)
-            emoji_link = await sticker_creator.create_emoji_pack(
+            emoji_link, emoji_ids = await sticker_creator.create_emoji_pack(
                 user_id=user_id,
                 emoji_files=cropped_files
             )
             logger.info(f"User {user_id} sticker pack created successfully: {emoji_link}")
 
+            cols, rows = grid_size
+            emoji_grid = self._format_emoji_grid(emoji_ids, cols, rows)
+            logger.info(f"User {user_id} formatted {len(emoji_ids)} emojis into {cols}x{rows} grid")
+
             reply_markup = self.keyboard_builder.build_back_to_menu()
 
             await query.edit_message_text(
-                strings.SUCCESS.format(link=emoji_link),
-                reply_markup=reply_markup
+                strings.SUCCESS.format(link=emoji_link, grid=emoji_grid),
+                reply_markup=reply_markup,
+                parse_mode="HTML"
             )
 
             logger.info(f"User {user_id} cleaning up temp directory: {temp_dir}")

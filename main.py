@@ -1,11 +1,21 @@
 """Main entry point for the emoji cropper bot."""
 
-import asyncio
+import os
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
 from src.config import settings
-from src.config.logger import setup_logger, get_logger
+from src.config.logger import setup_logger
 from src.bot.handlers import BotHandlers
+from telegram.request import HTTPXRequest
+
+
+request = HTTPXRequest(
+    connection_pool_size=8,
+    read_timeout=60.0,
+    write_timeout=60.0,
+    connect_timeout=30.0,
+    pool_timeout=10.0
+)
 
 logger = setup_logger()
 
@@ -23,7 +33,9 @@ def main():
         raise
 
     logger.info("Building Telegram application")
-    application = Application.builder().token(settings.BOT_TOKEN).build()
+
+    application = Application.builder().token(settings.BOT_TOKEN).request(request).build()
+    print(application)
     logger.info("Telegram application created successfully")
 
     handlers = BotHandlers()
@@ -37,6 +49,7 @@ def main():
 
     logger.info("Registering message and callback handlers")
     application.add_handler(MessageHandler(filters.PHOTO, handlers.handle_photo))
+    application.add_handler(MessageHandler(filters.Document.IMAGE, handlers.handle_document))
     application.add_handler(
         CallbackQueryHandler(handlers.handle_command_callback, pattern="^cmd_")
     )

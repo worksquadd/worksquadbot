@@ -28,7 +28,7 @@ class StickerPackCreator:
         user_id: int,
         emoji_files: List[str],
         pack_title: str = None
-    ) -> str:
+    ) -> tuple[str, List[str]]:
         """
         Create custom emoji sticker pack.
 
@@ -38,7 +38,7 @@ class StickerPackCreator:
             pack_title: Custom pack title
 
         Returns:
-            URL to the created emoji pack
+            Tuple of (URL to the created emoji pack, list of custom emoji IDs)
         """
         logger.info(f"User {user_id} creating emoji pack with {len(emoji_files)} stickers")
 
@@ -59,24 +59,50 @@ class StickerPackCreator:
                 sticker = InputSticker(
                     sticker=img_file.read(),
                     emoji_list=["😀"],
-                    format=StickerFormat.STATIC
                 )
                 stickers.append(sticker)
 
         logger.info(f"User {user_id} calling Telegram API to create sticker set")
+        emoji_ids = []
         try:
             await self.bot.create_new_sticker_set(
                 user_id=user_id,
                 name=pack_name,
                 title=pack_title,
-                stickers=stickers,
-                sticker_type="custom_emoji"
+                stickers=stickers[:1],
+                sticker_type="custom_emoji",
+                sticker_format=StickerFormat.STATIC
             )
+            for sticker in stickers[1:]:
+                await self.bot.add_sticker_to_set(
+                    user_id=user_id,
+                    name=pack_name,
+                    sticker=sticker
+                )
             logger.info(f"User {user_id} sticker set created successfully")
+
+            logger.info(f"User {user_id} fetching sticker set via raw API")
+            import httpx
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"https://api.telegram.org/bot{self.bot.token}/getStickerSet",
+                    params={"name": pack_name}
+                )
+                response_data = response.json()
+                logger.info(f"User {user_id} raw API response: {response_data}")
+
+                if response_data.get("ok") and "result" in response_data:
+                    stickers_data = response_data["result"].get("stickers", [])
+                    emoji_ids = [s.get("custom_emoji_id") for s in stickers_data if s.get("custom_emoji_id")]
+                    logger.info(f"User {user_id} extracted {len(emoji_ids)} custom emoji IDs")
+                else:
+                    logger.warning(f"User {user_id} failed to get sticker set from API")
+
         except Exception as e:
             logger.error(f"User {user_id} failed to create sticker set: {e}", exc_info=True)
             raise
 
         pack_url = f"https://t.me/addemoji/{pack_name}"
         logger.info(f"User {user_id} pack URL: {pack_url}")
-        return pack_url
+
+        return pack_url, emoji_ids
