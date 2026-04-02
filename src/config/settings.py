@@ -11,7 +11,7 @@ class Settings:
 
     BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
     TEMP_DIR_PREFIX: str = "temp_"
-    MAX_COLS = 11
+    MAX_COLS = 15
     MAX_CELLS = 120
     SELECT_PERCENTAGES = [1.0, 0.75, 0.5, 0.35, 0.25, 0.15]
     MIN_ASPECT_RATIO = 0.30

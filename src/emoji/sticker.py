@@ -1,5 +1,6 @@
 """Sticker pack creation and management."""
 
+import os
 import time
 from typing import List
 from telegram import Bot, InputSticker
@@ -51,6 +52,10 @@ class StickerPackCreator:
 
         logger.info(f"User {user_id} pack title: {pack_title}")
 
+        is_video = emoji_files[0].endswith(".webm") if emoji_files else False
+        sticker_format = StickerFormat.VIDEO if is_video else StickerFormat.STATIC
+        logger.info(f"User {user_id} sticker format: {sticker_format} (is_video: {is_video})")
+
         logger.info(f"User {user_id} preparing stickers for pack")
         stickers = []
         for idx, emoji_path in enumerate(emoji_files):
@@ -71,7 +76,7 @@ class StickerPackCreator:
                 title=pack_title,
                 stickers=stickers[:1],
                 sticker_type="custom_emoji",
-                sticker_format=StickerFormat.STATIC
+                sticker_format=sticker_format
             )
             for sticker in stickers[1:]:
                 await self.bot.add_sticker_to_set(

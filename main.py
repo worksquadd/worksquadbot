@@ -49,7 +49,9 @@ def main():
 
     logger.info("Registering message and callback handlers")
     application.add_handler(MessageHandler(filters.PHOTO, handlers.handle_photo))
-    application.add_handler(MessageHandler(filters.Document.IMAGE, handlers.handle_document))
+    application.add_handler(MessageHandler(filters.Document.IMAGE | filters.Document.VIDEO | filters.Document.MimeType("image/gif"), handlers.handle_document))
+    application.add_handler(MessageHandler(filters.VIDEO, handlers.handle_video))
+    application.add_handler(MessageHandler(filters.ANIMATION, handlers.handle_animation))
     application.add_handler(
         CallbackQueryHandler(handlers.handle_command_callback, pattern="^cmd_")
     )
