@@ -108,8 +108,6 @@ MEDIA_PARTS_TRUNCATED = "⚠️ Видео очень большое — отп�
 
 MEDIA_PARTS_FAILED = "⚠️ Не удалось отправить {count} из {total} частей."
 
-MEDIA_CAPTION = "🍿 worksquad"
-
 QUALITY_PROMPT = "🎬 Выбери качество видео:"
 QUALITY_ETA = " · ~{eta}"
 QUALITY_ETA_SECONDS = "{seconds} с"

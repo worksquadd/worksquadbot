@@ -9,6 +9,7 @@
 - All user-facing strings live in src/config/strings.py; media settings in src/config/settings.py via env.
 - Large videos (any size, up to 10h) are split into parts <= MEDIA_MAX_FILE_MB via ffmpeg `-c copy` (no re-encode) and sent as documents; part cap: MEDIA_MAX_PARTS.
 - Local Bot API mode via TELEGRAM_API_ID/TELEGRAM_API_HASH (base http://telegram-bot-api:8081/bot) enables 2GB sends (videos up to ~3h go whole); in standard mode MEDIA_MAX_FILE_MB is clamped to 48MB at startup.
+- Media quality callback state is intentionally process-local: old quality buttons expire after a bot restart. The media signature is fixed by `MEDIA_CAPTION_TEXT` and `MEDIA_CAPTION_CUSTOM_EMOJI_IDS`; do not persist per-user captions in `bot_data.pkl`.
 - Keep `context` and `caption_entities` explicit through every media-delivery helper; an out-of-scope value aborts delivery after a successful download. A single video should use `reply_video`; `reply_document` is only its Telegram-error fallback.
 - Local Bot API can accept a valid MP4 without deriving its card metadata. Before `reply_video`, probe it with ffprobe and supply duration/width/height plus an ffmpeg JPEG thumbnail, otherwise Telegram displays a blank `00:00` card.
 - Never offer fixed YouTube heights blindly: query yt-dlp format metadata first and show only the heights present in that source, since the fallback selector otherwise makes several quality buttons download the same stream.

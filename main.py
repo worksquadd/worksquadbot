@@ -3,7 +3,7 @@
 import os
 import shutil
 import tempfile
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, PicklePersistence, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
 from src.config import settings
 from src.config.logger import setup_logger
@@ -68,7 +68,6 @@ def main():
             .base_file_url(settings.TELEGRAM_LOCAL_FILE_BASE_URL)
             .local_mode(True)
             .request(local_request)
-            .persistence(PicklePersistence(filepath=settings.PERSISTENCE_FILE))
             .concurrent_updates(True)
             .build()
         )
@@ -84,7 +83,6 @@ def main():
             Application.builder()
             .token(settings.BOT_TOKEN)
             .request(request)
-            .persistence(PicklePersistence(filepath=settings.PERSISTENCE_FILE))
             .concurrent_updates(True)
             .build()
         )
@@ -136,16 +134,6 @@ def main():
         )
     )
     logger.info("Registered private media link handler")
-
-    logger.info("Registering emoji ad tracker handler")
-    application.add_handler(
-        MessageHandler(
-            filters.ChatType.PRIVATE & ~filters.COMMAND,
-            handlers.track_emoji_message
-        ),
-        group=1,
-    )
-    logger.info("Registered emoji ad tracker handler")
 
     logger.info("Registering media quality callback handler")
     application.add_handler(

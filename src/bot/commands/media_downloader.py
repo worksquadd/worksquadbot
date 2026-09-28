@@ -175,74 +175,35 @@ class MediaDownloaderCommand:
         self.logger.info(f"User {user_id} download status message sent, queued={queued}")
         await self._download_and_deliver(update, context, platform, url, status, None)
 
-    async def track_emoji_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """
-        Remember the last private message containing custom emojis.
+    @staticmethod
+    def _utf16_length(text: str) -> int:
+        """Return Telegram's UTF-16 entity offset length for text."""
+        return len(text.encode("utf-16-le")) // 2
 
-        Args:
-            update: Telegram update object
-            context: Context for the handler
-        """
-        message = update.effective_message
-        user_id = update.effective_user.id if update.effective_user else "Unknown"
-        text = (message.text or message.caption or "") if message else ""
-        entities = list(message.entities or []) + list(message.caption_entities or []) if message else []
-        has_custom_emoji = any(e.type == "custom_emoji" for e in entities)
-        has_signature = "🎨worksquadbot🎨" in text
-        if not has_custom_emoji and not has_signature:
-            return
-        custom_entities = [
-            {"type": "custom_emoji", "offset": e.offset, "length": e.length, "custom_emoji_id": e.custom_emoji_id}
-            for e in entities if e.type == "custom_emoji" and e.custom_emoji_id
-        ]
-        context.chat_data["emoji_caption"] = {"text": text, "entities": custom_entities}
-        self.logger.info(
-            f"User {user_id} saved emoji caption from message {message.message_id}: "
-            f"entities={len(custom_entities)}, text={text[:50]!r}"
-        )
+    def _build_caption(self) -> tuple[str, Optional[list[MessageEntity]]]:
+        """Build the fixed media signature configured for the bot."""
+        caption = settings.MEDIA_CAPTION_TEXT
+        emoji_ids = settings.MEDIA_CAPTION_CUSTOM_EMOJI_IDS
+        emoji_positions = [match.start() for match in re.finditer("🎨", caption)]
+        if len(emoji_ids) != len(emoji_positions):
+            if emoji_ids:
+                self.logger.warning(
+                    "MEDIA_CAPTION_CUSTOM_EMOJI_IDS count does not match 🎨 markers; sending plain caption"
+                )
+            return caption, None
 
-    def _build_caption(self, context: ContextTypes.DEFAULT_TYPE) -> tuple[str, Optional[list]]:
-        """
-        Build media caption from the user's last custom emoji message.
-
-        Args:
-            context: Context for the handler
-
-        Returns:
-            Tuple of (caption text, custom emoji entities or None)
-        """
-        stored = context.chat_data.get("emoji_caption")
-        if not stored or not stored.get("entities"):
-            return strings.MEDIA_CAPTION, None
         entities = [
-            MessageEntity(type=e["type"], offset=e["offset"], length=e["length"], custom_emoji_id=e["custom_emoji_id"])
-            for e in stored["entities"]
-        ]
-        self.logger.info(f"Using saved emoji caption with {len(entities)} custom emoji")
-        return stored["text"], entities
-
-    async def _forward_emoji_ad(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """
-        Forward the user's last custom emoji message after a successful download.
-
-        Args:
-            update: Telegram update object
-            context: Context for the handler
-        """
-        ad = context.chat_data.get("last_emoji_ad")
-        user_id = update.effective_user.id
-        if not ad:
-            self.logger.debug(f"User {user_id} has no saved emoji ad, skipping forward")
-            return
-        try:
-            await context.bot.forward_message(
-                chat_id=ad["chat_id"],
-                from_chat_id=ad["chat_id"],
-                message_id=ad["message_id"],
+            MessageEntity(
+                type="custom_emoji",
+                offset=self._utf16_length(caption[:position]),
+                length=self._utf16_length("🎨"),
+                custom_emoji_id=emoji_id,
             )
-            self.logger.info(f"User {user_id} emoji ad forwarded after media delivery")
-        except Exception as e:
-            self.logger.warning(f"User {user_id} emoji ad forward failed (deleted?): {e}")
+            for position, emoji_id in zip(emoji_positions, emoji_ids)
+        ]
+        if entities:
+            self.logger.info("Using configured media signature with %d custom emoji", len(entities))
+        return caption, entities or None
 
     async def handle_quality(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
@@ -373,8 +334,7 @@ class MediaDownloaderCommand:
                     download_media(url, platform, output_dir, format_hint),
                     timeout=timeout_budget,
                 )
-                await self._send_result(update, context, result, status)
-                await self._forward_emoji_ad(update, context)
+                await self._send_result(update, result, status)
                 try:
                     await status.delete()
                     self.logger.info(f"User {user_id} status message deleted")
@@ -434,20 +394,17 @@ class MediaDownloaderCommand:
         except Exception as e:
             self.logger.error(f"Failed to send reply message: {e}", exc_info=True)
 
-    async def _send_result(
-        self, update: Update, context: ContextTypes.DEFAULT_TYPE, result: MediaResult, status
-    ) -> None:
+    async def _send_result(self, update: Update, result: MediaResult, status) -> None:
         """
         Send downloaded files to the user.
 
         Args:
             update: Telegram update object
-            context: Telegram callback context used for the saved custom-emoji caption
             result: Downloaded media result
             status: Status message object for progress updates
         """
         message = update.effective_message
-        caption, caption_entities = self._build_caption(context)
+        caption, caption_entities = self._build_caption()
 
         if result.kind == "audio":
             audio_path = max(result.files, key=os.path.getsize)

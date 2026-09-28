@@ -42,9 +42,8 @@ class MediaDeliveryTests(unittest.IsolatedAsyncioTestCase):
         )
         command._create_video_thumbnail = AsyncMock(return_value=None)
         update = SimpleNamespace(effective_message=message)
-        context = SimpleNamespace(chat_data={})
         result = MediaResult("youtube", "video", [video_path], 0.01, "https://youtu.be/test")
-        await command._send_result(update, context, result, status=None)
+        await command._send_result(update, result, status=None)
 
     async def test_single_video_is_sent_as_video(self):
         message = RecordingMessage()
@@ -52,7 +51,7 @@ class MediaDeliveryTests(unittest.IsolatedAsyncioTestCase):
         await self._deliver(message)
 
         self.assertEqual(len(message.video_calls), 1)
-        self.assertEqual(message.video_calls[0]["caption"], "🍿 worksquad")
+        self.assertEqual(message.video_calls[0]["caption"], "🎨worksquadbot🎨")
         self.assertTrue(message.video_calls[0]["supports_streaming"])
         self.assertEqual(message.video_calls[0]["duration"], 42)
         self.assertEqual(message.video_calls[0]["width"], 640)
@@ -66,6 +65,19 @@ class MediaDeliveryTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(len(message.video_calls), 1)
         self.assertEqual(len(message.document_calls), 1)
+
+    async def test_configured_signature_uses_two_custom_emoji_entities(self):
+        command = MediaDownloaderCommand()
+        original_ids = settings.MEDIA_CAPTION_CUSTOM_EMOJI_IDS
+        self.addCleanup(setattr, settings, "MEDIA_CAPTION_CUSTOM_EMOJI_IDS", original_ids)
+        settings.MEDIA_CAPTION_CUSTOM_EMOJI_IDS = ("first", "second")
+
+        caption, entities = command._build_caption()
+
+        self.assertEqual(caption, "🎨worksquadbot🎨")
+        self.assertEqual([(entity.offset, entity.length, entity.custom_emoji_id) for entity in entities], [
+            (0, 2, "first"), (14, 2, "second"),
+        ])
 
     async def test_embedded_youtube_client_is_the_default(self):
         self.assertEqual(settings.MEDIA_YT_PLAYER_CLIENT, "embedded")

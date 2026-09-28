@@ -95,6 +95,8 @@ Instagram требует авторизацию:
 - `MEDIA_MAX_PARTS` — максимальное число частей видео для отправки (по умолчанию 40)
 - `MEDIA_IG_COOKIES_FILE` — путь к cookies-файлу Instagram
 - `MEDIA_YT_PLAYER_CLIENT` — player client для YouTube (по умолчанию `embedded`, который отдаёт доступные высокие разрешения)
+- `MEDIA_CAPTION_TEXT` — постоянная подпись к скачанным медиа (по умолчанию `🎨worksquadbot🎨`)
+- `MEDIA_CAPTION_CUSTOM_EMOJI_IDS` — через запятую ID кастомных emoji для маркеров `🎨` в подписи
 
 Бот скачивает видео любого размера (до 10 часов). Если файл больше `MEDIA_MAX_FILE_MB`, он без перекодирования режется на части (ffmpeg `-c copy`) и отправляется отдельными документами.
 

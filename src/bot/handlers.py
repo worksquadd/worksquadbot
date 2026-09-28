@@ -83,16 +83,6 @@ class BotHandlers:
         logger.info(f"User {user_id} sent quality callback, routing to media downloader")
         await self.media_downloader.handle_quality(update, context)
 
-    async def track_emoji_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """
-        Track private messages containing custom emojis.
-
-        Args:
-            update: Telegram update object
-            context: Context for the handler
-        """
-        await self.media_downloader.track_emoji_message(update, context)
-
     async def handle_group_photo_emojicrop(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Crop a group photo only when its caption explicitly mentions this bot."""
         if not is_emojicrop_request(update.effective_message.caption):
