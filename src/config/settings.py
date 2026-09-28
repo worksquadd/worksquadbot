@@ -24,6 +24,7 @@ class Settings:
     MEDIA_CONCURRENT_PER_USER: int = int(os.getenv("MEDIA_CONCURRENT_PER_USER", "16"))
     MEDIA_CONCURRENT_TOTAL: int = int(os.getenv("MEDIA_CONCURRENT_TOTAL", "16"))
     MEDIA_YT_CONCURRENT_FRAGMENTS: int = int(os.getenv("MEDIA_YT_CONCURRENT_FRAGMENTS", "4"))
+    BOT_USERNAME: str = os.getenv("BOT_USERNAME", "worksquadbot")
     TELEGRAM_API_ID: str = os.getenv("TELEGRAM_API_ID", "")
     TELEGRAM_API_HASH: str = os.getenv("TELEGRAM_API_HASH", "")
     TELEGRAM_LOCAL_BASE_URL: str = os.getenv("TELEGRAM_LOCAL_BASE_URL", "http://telegram-bot-api:8081/bot")

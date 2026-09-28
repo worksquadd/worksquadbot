@@ -100,10 +100,10 @@ def main():
     logger.info("Command handlers registered: /start, /help, /emoji_cropper")
 
     logger.info("Registering message and callback handlers")
-    application.add_handler(MessageHandler(filters.PHOTO, handlers.handle_photo))
-    application.add_handler(MessageHandler(filters.Document.IMAGE | filters.Document.VIDEO | filters.Document.MimeType("image/gif"), handlers.handle_document))
-    application.add_handler(MessageHandler(filters.VIDEO, handlers.handle_video))
-    application.add_handler(MessageHandler(filters.ANIMATION, handlers.handle_animation))
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.PHOTO, handlers.handle_photo))
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & (filters.Document.IMAGE | filters.Document.VIDEO | filters.Document.MimeType("image/gif")), handlers.handle_document))
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.VIDEO, handlers.handle_video))
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.ANIMATION, handlers.handle_animation))
     application.add_handler(
         CallbackQueryHandler(handlers.handle_command_callback, pattern="^cmd_")
     )
@@ -114,6 +114,19 @@ def main():
         CallbackQueryHandler(handlers.handle_padding_selection, pattern="^padding_")
     )
     logger.info("Message and callback handlers registered")
+
+    group_emoji_filter = filters.ChatType.GROUPS & filters.Regex(
+        rf"(?i)^\s*@{settings.BOT_USERNAME}\s+emojicrop\s*$"
+    )
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.PHOTO & filters.CaptionRegex(
+        rf"(?i)^\s*@{settings.BOT_USERNAME}\s+emojicrop\s*$"
+    ), handlers.handle_group_photo_emojicrop))
+    application.add_handler(MessageHandler(group_emoji_filter & filters.REPLY, handlers.handle_group_reply_emojicrop))
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.TEXT & filters.Regex(rf"(?i)^\s*@{settings.BOT_USERNAME}\s+"),
+        handlers.handle_media_link,
+    ))
+    logger.info("Registered explicit group mention handlers")
 
     logger.info("Registering private media link handler")
     application.add_handler(

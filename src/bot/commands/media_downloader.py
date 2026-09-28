@@ -17,6 +17,7 @@ from telegram.ext import ContextTypes
 
 from src.config import strings, settings
 from src.config.logger import get_logger
+from src.bot.group_mentions import is_bot_mention, strip_bot_mention
 from src.media.downloader import (
     MediaResult,
     download_media,
@@ -150,6 +151,11 @@ class MediaDownloaderCommand:
         text = update.effective_message.text
         self.logger.info(f"User {user_id} sent private text message, checking for media link")
 
+        if update.effective_chat.type != "private":
+            if not is_bot_mention(text):
+                self.logger.debug(f"User {user_id} group message does not mention the bot")
+                return
+            text = strip_bot_mention(text)
         extracted = extract_media_link(text)
         if extracted is None:
             self.logger.debug(f"User {user_id} message contains no supported media link")

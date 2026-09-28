@@ -5,6 +5,7 @@ from telegram.ext import ContextTypes
 
 from src.bot.commands import StartCommand, HelpCommand, EmojiCropperCommand
 from src.bot.commands.media_downloader import MediaDownloaderCommand
+from src.bot.group_mentions import is_emojicrop_request
 from src.config.logger import get_logger
 
 logger = get_logger()
@@ -91,6 +92,22 @@ class BotHandlers:
             context: Context for the handler
         """
         await self.media_downloader.track_emoji_message(update, context)
+
+    async def handle_group_photo_emojicrop(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Crop a group photo only when its caption explicitly mentions this bot."""
+        if not is_emojicrop_request(update.effective_message.caption):
+            return
+        logger.info(f"User {update.effective_user.id} requested group photo emoji crop")
+        await self.emoji_cropper_command.handle_photo(update, context)
+
+    async def handle_group_reply_emojicrop(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Crop the photo that an explicit group emojicrop request replies to."""
+        message = update.effective_message
+        target = message.reply_to_message
+        if not is_emojicrop_request(message.text) or not target or not target.photo:
+            return
+        logger.info(f"User {update.effective_user.id} requested group reply emoji crop")
+        await self.emoji_cropper_command.handle_photo(update, context, source_message=target)
 
     async def handle_photo(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """

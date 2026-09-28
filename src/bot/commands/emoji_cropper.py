@@ -74,18 +74,20 @@ class EmojiCropperCommand:
                 reply_markup=reply_markup
             )
 
-    async def handle_photo(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def handle_photo(self, update: Update, context: ContextTypes.DEFAULT_TYPE, source_message=None):
         """
         Handle incoming photos for emoji cropping.
 
         Args:
             update: Telegram update object
             context: Context for the handler
+            source_message: Optional photo message to crop when a group text replies to it
         """
         user_id = update.effective_user.id
         logger.info(f"User {user_id} uploading photo for processing")
 
-        photo = update.message.photo[-1]
+        source_message = source_message or update.effective_message
+        photo = source_message.photo[-1]
         logger.debug(f"User {user_id} photo file_id: {photo.file_id}, size: {photo.file_size} bytes")
 
         logger.info(f"User {user_id} downloading photo from Telegram")

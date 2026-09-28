@@ -17,3 +17,7 @@
 ## Deployment
 
 - Until the owner requests CI/CD, deploy directly through `ssh worksquad`: archive the tested commit into a new release directory, reuse the persistent `.env`, cookies, and Bot API data, build there, then recreate the existing Compose project. Use Docker cache for normal code changes; reserve `--no-cache` for base-image or downloader-dependency updates.
+
+## Group mentions
+
+- Only explicit group mentions may trigger work: `@worksquadbot <media-link>`, a photo caption exactly `@worksquadbot emojicrop`, or an exact `@worksquadbot emojicrop` reply to a photo. Keep ordinary group media and chatter untouched.
