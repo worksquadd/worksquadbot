@@ -4,6 +4,7 @@ import os
 import tempfile
 import unittest
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 from telegram.error import BadRequest
 
@@ -35,6 +36,10 @@ class MediaDeliveryTests(unittest.IsolatedAsyncioTestCase):
             video_path = video.name
         self.addCleanup(lambda: os.path.exists(video_path) and os.unlink(video_path))
         command = MediaDownloaderCommand()
+        command._probe_video_metadata = AsyncMock(
+            return_value={"duration": 42, "width": 640, "height": 360}
+        )
+        command._create_video_thumbnail = AsyncMock(return_value=None)
         update = SimpleNamespace(effective_message=message)
         context = SimpleNamespace(chat_data={})
         result = MediaResult("youtube", "video", [video_path], 0.01, "https://youtu.be/test")
@@ -48,6 +53,9 @@ class MediaDeliveryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(message.video_calls), 1)
         self.assertEqual(message.video_calls[0]["caption"], "🍿 worksquad")
         self.assertTrue(message.video_calls[0]["supports_streaming"])
+        self.assertEqual(message.video_calls[0]["duration"], 42)
+        self.assertEqual(message.video_calls[0]["width"], 640)
+        self.assertEqual(message.video_calls[0]["height"], 360)
         self.assertEqual(message.document_calls, [])
 
     async def test_document_is_only_fallback_after_telegram_video_error(self):

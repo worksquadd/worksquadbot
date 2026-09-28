@@ -1,6 +1,7 @@
 """Media downloader command handler."""
 
 import asyncio
+import json
 import os
 import re
 import shutil
@@ -440,15 +441,73 @@ class MediaDownloaderCommand:
             caption_entities: Optional custom-emoji entities for the caption
         """
         self.logger.info(f"Sending video: {video_path}")
+        metadata = await self._probe_video_metadata(video_path)
+        thumbnail_path = await self._create_video_thumbnail(video_path)
+        video_kwargs = {
+            "supports_streaming": True,
+            "caption": caption,
+            "caption_entities": caption_entities,
+        }
+        if metadata:
+            video_kwargs.update(metadata)
         try:
-            with open(video_path, "rb") as f:
-                await message.reply_video(video=f, supports_streaming=True, caption=caption, caption_entities=caption_entities)
+            with open(video_path, "rb") as video_file:
+                if thumbnail_path:
+                    with open(thumbnail_path, "rb") as thumbnail_file:
+                        await message.reply_video(video=video_file, thumbnail=thumbnail_file, **video_kwargs)
+                else:
+                    await message.reply_video(video=video_file, **video_kwargs)
             self.logger.info(f"Video sent successfully: {video_path}")
         except TelegramError as e:
             self.logger.warning(f"reply_video failed, falling back to document: {e}")
             with open(video_path, "rb") as f:
                 await message.reply_document(document=f, caption=caption, caption_entities=caption_entities)
             self.logger.info(f"Video sent as document: {video_path}")
+
+    async def _probe_video_metadata(self, video_path: str) -> Optional[dict]:
+        """Return duration and dimensions explicitly required by Local Bot API cards."""
+        cmd = [
+            "ffprobe", "-v", "error", "-show_entries",
+            "format=duration:stream=codec_type,width,height",
+            "-of", "json", video_path,
+        ]
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            )
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
+            if proc.returncode != 0:
+                return None
+            payload = json.loads(stdout)
+            stream = next((item for item in payload.get("streams", []) if item.get("codec_type") == "video"), None)
+            duration = round(float(payload["format"]["duration"]))
+            if not stream or duration <= 0:
+                return None
+            metadata = {"duration": duration}
+            if stream.get("width") and stream.get("height"):
+                metadata.update(width=stream["width"], height=stream["height"])
+            return metadata
+        except (asyncio.TimeoutError, FileNotFoundError, KeyError, TypeError, ValueError, json.JSONDecodeError) as e:
+            self.logger.warning(f"Could not probe video metadata for {video_path}: {e}")
+            return None
+
+    async def _create_video_thumbnail(self, video_path: str) -> Optional[str]:
+        """Create a JPEG preview because Local Bot API does not generate one reliably."""
+        thumbnail_path = os.path.join(os.path.dirname(video_path), "telegram_preview.jpg")
+        cmd = [
+            "ffmpeg", "-y", "-ss", "1", "-i", video_path, "-frames:v", "1",
+            "-vf", "scale=320:-2", thumbnail_path,
+        ]
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL
+            )
+            await asyncio.wait_for(proc.wait(), timeout=30)
+            if proc.returncode == 0 and os.path.getsize(thumbnail_path) > 0:
+                return thumbnail_path
+        except (asyncio.TimeoutError, FileNotFoundError, OSError) as e:
+            self.logger.warning(f"Could not create video thumbnail for {video_path}: {e}")
+        return None
 
     async def _send_video_parts(self, message, status, files: List[str], caption: str, caption_entities) -> None:
         """
