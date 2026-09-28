@@ -12,6 +12,7 @@
 - Keep `context` and `caption_entities` explicit through every media-delivery helper; an out-of-scope value aborts delivery after a successful download. A single video should use `reply_video`; `reply_document` is only its Telegram-error fallback.
 - Local Bot API can accept a valid MP4 without deriving its card metadata. Before `reply_video`, probe it with ffprobe and supply duration/width/height plus an ffmpeg JPEG thumbnail, otherwise Telegram displays a blank `00:00` card.
 - Never offer fixed YouTube heights blindly: query yt-dlp format metadata first and show only the heights present in that source, since the fallback selector otherwise makes several quality buttons download the same stream.
+- Put a size-derived server ETA beside each offered YouTube quality. It is the estimated download plus Telegram upload time only; the recipient's Telegram download is outside the bot's control.
 
 ## Deployment
 

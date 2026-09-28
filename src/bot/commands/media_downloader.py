@@ -8,6 +8,7 @@ import shutil
 import sys
 import tempfile
 import time
+from math import ceil
 from typing import List, Optional, Tuple
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto, MessageEntity
@@ -55,8 +56,8 @@ QUALITY_FORMATS = {
 }
 
 
-async def _available_yt_heights(url: str) -> List[int]:
-    """Return video heights advertised by YouTube without downloading media."""
+async def _available_yt_qualities(url: str) -> dict[int, int]:
+    """Return available H.264 heights mapped to an approximate merged file size."""
     cmd = [
         sys.executable, "-m", "yt_dlp", url, "--no-playlist", "--skip-download",
         "--dump-single-json", "--socket-timeout", "15",
@@ -71,11 +72,37 @@ async def _available_yt_heights(url: str) -> List[int]:
         )
         stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
         if proc.returncode != 0:
-            return []
+            return {}
         formats = json.loads(stdout).get("formats", [])
-        return sorted({item["height"] for item in formats if item.get("vcodec") != "none" and item.get("height")})
+        audio_sizes = [
+            item.get("filesize") or item.get("filesize_approx") or 0
+            for item in formats
+            if item.get("vcodec") == "none" and str(item.get("acodec", "")).startswith("mp4a")
+        ]
+        audio_size = max(audio_sizes, default=0)
+        qualities: dict[int, int] = {}
+        for item in formats:
+            height = item.get("height")
+            if not height or not str(item.get("vcodec", "")).startswith("avc1"):
+                continue
+            video_size = item.get("filesize") or item.get("filesize_approx") or 0
+            if video_size:
+                qualities[height] = max(qualities.get(height, 0), video_size + audio_size)
+        return qualities
     except (asyncio.TimeoutError, FileNotFoundError, ValueError, json.JSONDecodeError):
-        return []
+        return {}
+
+
+def _format_eta(size_bytes: Optional[int]) -> str:
+    """Estimate server download plus upload time from a conservative 8 MiB/s rate."""
+    if not size_bytes:
+        return ""
+    seconds = max(8, ceil(size_bytes / (8 * 1024 * 1024) + 5))
+    if seconds < 60:
+        eta = strings.QUALITY_ETA_SECONDS.format(seconds=seconds)
+    else:
+        eta = strings.QUALITY_ETA_MINUTES.format(minutes=ceil(seconds / 60))
+    return strings.QUALITY_ETA.format(eta=eta)
 
 
 def _extract_yt_id(url: str) -> Optional[str]:
@@ -266,14 +293,17 @@ class MediaDownloaderCommand:
         """
         user_id = update.effective_user.id
         message = update.effective_message
-        heights = await _available_yt_heights(url)
-        best_height = max(heights, default=None)
-        best_label = f"{strings.BUTTON_QUALITY_BEST} · {best_height}p" if best_height else strings.BUTTON_QUALITY_BEST
+        qualities = await _available_yt_qualities(url)
+        best_height = max(qualities, default=None)
+        best_label = (
+            f"{strings.BUTTON_QUALITY_BEST} · {best_height}p{_format_eta(qualities.get(best_height))}"
+            if best_height else strings.BUTTON_QUALITY_BEST
+        )
         buttons = [(best_label, "mediaq:best")]
         buttons.extend(
-            (label, callback)
+            (f"{label}{_format_eta(qualities.get(int(callback.rsplit(':', 1)[1])))}", callback)
             for label, callback in QUALITY_BUTTONS[1:-1]
-            if int(callback.rsplit(":", 1)[1]) in heights
+            if int(callback.rsplit(":", 1)[1]) in qualities
         )
         buttons.append(QUALITY_BUTTONS[-1])
         keyboard = InlineKeyboardMarkup(
@@ -297,7 +327,7 @@ class MediaDownloaderCommand:
         while len(pending) > 10:
             pending.pop(next(iter(pending)))
         self.logger.info(
-            f"User {user_id} offered YouTube quality choice: heights={heights}, "
+            f"User {user_id} offered YouTube quality choice: qualities={qualities}, "
             f"url={url}, prompt_message={prompt_message.message_id}"
         )
 

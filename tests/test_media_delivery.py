@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 
 from telegram.error import BadRequest
 
-from src.bot.commands.media_downloader import MediaDownloaderCommand
+from src.bot.commands.media_downloader import MediaDownloaderCommand, _format_eta
 from src.config.settings import settings
 from src.media.downloader import MediaResult
 
@@ -69,3 +69,7 @@ class MediaDeliveryTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_embedded_youtube_client_is_the_default(self):
         self.assertEqual(settings.MEDIA_YT_PLAYER_CLIENT, "embedded")
+
+    async def test_quality_eta_uses_size_based_estimate(self):
+        self.assertEqual(_format_eta(8 * 1024 * 1024), " · ~8 с")
+        self.assertEqual(_format_eta(389 * 1024 * 1024), " · ~54 с")

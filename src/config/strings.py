@@ -111,6 +111,9 @@ MEDIA_PARTS_FAILED = "⚠️ Не удалось отправить {count} из
 MEDIA_CAPTION = "🍿 worksquad"
 
 QUALITY_PROMPT = "🎬 Выбери качество видео:"
+QUALITY_ETA = " · ~{eta}"
+QUALITY_ETA_SECONDS = "{seconds} с"
+QUALITY_ETA_MINUTES = "{minutes} мин"
 BUTTON_QUALITY_BEST = "⭐ Лучшее"
 BUTTON_QUALITY_1080 = "📹 1080p"
 BUTTON_QUALITY_720 = "📹 720p"
