@@ -5,6 +5,7 @@ import json
 import os
 import re
 import shutil
+import sys
 import tempfile
 import time
 from typing import List, Optional, Tuple
@@ -52,6 +53,29 @@ QUALITY_FORMATS = {
     "480": "bestvideo[vcodec^=avc1][height<=480]+bestaudio[acodec^=mp4a]/bestvideo[height<=480]+bestaudio/best[height<=480]",
     "audio": "audio",
 }
+
+
+async def _available_yt_heights(url: str) -> List[int]:
+    """Return video heights advertised by YouTube without downloading media."""
+    cmd = [
+        sys.executable, "-m", "yt_dlp", url, "--no-playlist", "--skip-download",
+        "--dump-single-json", "--socket-timeout", "15",
+    ]
+    extractor_args = [f"getpot_bgutil_baseurl={settings.MEDIA_YT_POT_BASEURL}"]
+    if settings.MEDIA_YT_PLAYER_CLIENT:
+        extractor_args.append(f"player_client={settings.MEDIA_YT_PLAYER_CLIENT}")
+    cmd.extend(["--extractor-args", "youtube:" + ";".join(extractor_args)])
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
+        if proc.returncode != 0:
+            return []
+        formats = json.loads(stdout).get("formats", [])
+        return sorted({item["height"] for item in formats if item.get("vcodec") != "none" and item.get("height")})
+    except (asyncio.TimeoutError, FileNotFoundError, ValueError, json.JSONDecodeError):
+        return []
 
 
 def _extract_yt_id(url: str) -> Optional[str]:
@@ -242,8 +266,18 @@ class MediaDownloaderCommand:
         """
         user_id = update.effective_user.id
         message = update.effective_message
+        heights = await _available_yt_heights(url)
+        best_height = max(heights, default=None)
+        best_label = f"{strings.BUTTON_QUALITY_BEST} · {best_height}p" if best_height else strings.BUTTON_QUALITY_BEST
+        buttons = [(best_label, "mediaq:best")]
+        buttons.extend(
+            (label, callback)
+            for label, callback in QUALITY_BUTTONS[1:-1]
+            if int(callback.rsplit(":", 1)[1]) in heights
+        )
+        buttons.append(QUALITY_BUTTONS[-1])
         keyboard = InlineKeyboardMarkup(
-            [[InlineKeyboardButton(label, callback_data=callback)] for label, callback in QUALITY_BUTTONS]
+            [[InlineKeyboardButton(label, callback_data=callback)] for label, callback in buttons]
         )
         thumb = _extract_yt_thumb(url)
         prompt_message = None
@@ -263,7 +297,8 @@ class MediaDownloaderCommand:
         while len(pending) > 10:
             pending.pop(next(iter(pending)))
         self.logger.info(
-            f"User {user_id} offered YouTube quality choice: {url}, prompt_message={prompt_message.message_id}"
+            f"User {user_id} offered YouTube quality choice: heights={heights}, "
+            f"url={url}, prompt_message={prompt_message.message_id}"
         )
 
     async def _download_and_deliver(
