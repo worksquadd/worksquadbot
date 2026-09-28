@@ -3,6 +3,7 @@ temp/
 temp_*/
 source_images/
 processed_emojis/
+bot-api-data/
 __pycache__/
 *.pyc
 *.pyo
@@ -13,3 +14,4 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+ig-cookies.txt

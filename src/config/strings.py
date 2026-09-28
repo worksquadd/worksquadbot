@@ -14,6 +14,8 @@ EMOJI_CROPPER_START = (
     "🎬 Видео: MP4, GIF или WebM (макс. 3 сек)"
 )
 
+GRID_WHOLE_IMAGE = "1 эмодзи (вся картинка)"
+
 ASK_GRID_SIZE = (
     "📐 Выбери размер сетки для разрезания картинки:\n\n"
     "Картинка будет разрезана на {width}x{height} частей"
@@ -88,3 +90,36 @@ MENU_BUTTONS = {
     "help": "ℹ️ Help",
     "back_to_menu": "◀️ Back to Menu",
 }
+
+DOWNLOADING = "⏳ Скачиваю медиа..."
+QUEUE_ADDED = "⏳ Ставлю в очередь, скоро начну качать."
+
+ERROR_ALREADY_DOWNLOADING = "⏳ Уже качаю твою предыдущую ссылку, подожди!"
+
+ERROR_DOWNLOAD_FAILED = "❌ Не смог скачать это медиа. Возможно ссылка битая или платформа изменилась."
+
+ERROR_DOWNLOAD_TIMEOUT = "⌛ Скачивание заняло слишком много времени. Попробуй позже."
+
+ERROR_IG_AUTH = "🔒 Instagram требует авторизацию. Добавь cookies-файл (см. README) и перезапусти бота."
+
+MEDIA_SENDING_PART = "📨 Отправляю часть {current}/{total}..."
+
+MEDIA_PARTS_TRUNCATED = "⚠️ Видео очень большое — отправлены только первые {total} частей."
+
+MEDIA_PARTS_FAILED = "⚠️ Не удалось отправить {count} из {total} частей."
+
+MEDIA_CAPTION = "🍿 worksquad"
+
+QUALITY_PROMPT = "🎬 Выбери качество видео:"
+BUTTON_QUALITY_BEST = "⭐ Лучшее"
+BUTTON_QUALITY_1080 = "📹 1080p"
+BUTTON_QUALITY_720 = "📹 720p"
+BUTTON_QUALITY_480 = "📹 480p"
+BUTTON_QUALITY_AUDIO = "🎵 Только звук (MP3)"
+QUALITY_LABEL_BEST = "в лучшем качестве"
+QUALITY_LABEL_1080 = "в 1080p"
+QUALITY_LABEL_720 = "в 720p"
+QUALITY_LABEL_480 = "в 480p"
+QUALITY_LABEL_AUDIO = "как MP3"
+DOWNLOADING_QUALITY = "⏳ Скачиваю {quality}..."
+ERROR_QUALITY_UNKNOWN = "⏳ Эта ссылка устарела (бот перезапускался). Отправь ссылку ещё раз 🙏"

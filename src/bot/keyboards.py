@@ -58,7 +58,10 @@ class KeyboardBuilder:
         Returns:
             InlineKeyboardMarkup with grid options
         """
-        keyboard = []
+        keyboard = [[InlineKeyboardButton(
+            strings.GRID_WHOLE_IMAGE,
+            callback_data="grid_1x1"
+        )]]
         for cols, rows in grid_sizes:
             text = f"{cols}x{rows} ({cols * rows} эмодзи)"
             callback_data = f"grid_{cols}x{rows}"

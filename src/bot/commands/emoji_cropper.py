@@ -450,6 +450,13 @@ class EmojiCropperCommand:
             )
             logger.info(f"User {user_id} sticker pack created successfully: {emoji_link}")
 
+            if emoji_ids:
+                context.chat_data["emoji_caption"] = {
+                    "text": strings.MEDIA_CAPTION,
+                    "entities": [{"type": "custom_emoji", "offset": 0, "length": 2, "custom_emoji_id": emoji_ids[0]}],
+                }
+                logger.info(f"User {user_id} media caption updated with custom emoji from new pack")
+
             cols, rows = grid_size
             emoji_grid = self._format_emoji_grid(emoji_ids, cols, rows)
             logger.info(f"User {user_id} formatted {len(emoji_ids)} emojis into {cols}x{rows} grid")

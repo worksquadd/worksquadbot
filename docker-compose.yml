@@ -1,9 +1,24 @@
-version: "3.9"
-
 services:
+  telegram-bot-api:
+    image: aiogram/telegram-bot-api:latest
+    env_file:
+      - .env
+    environment:
+      TELEGRAM_LOCAL: "1"
+    volumes:
+      - ./bot-api-data:/var/lib/telegram-bot-api
+    ports:
+      - "127.0.0.1:8081:8081"
+    restart: unless-stopped
   bot:
     build: .
     env_file:
       - .env
     volumes:
       - ./temp:/app/temp
+      - ./ig-cookies.txt:/app/ig-cookies.txt:ro
+      - ./bot-api-data:/var/lib/telegram-bot-api:ro
+    depends_on: [telegram-bot-api, bgutil]
+  bgutil:
+    image: brainicism/bgutil-ytdlp-pot-provider:latest
+    restart: unless-stopped

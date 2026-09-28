@@ -4,6 +4,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.bot.commands import StartCommand, HelpCommand, EmojiCropperCommand
+from src.bot.commands.media_downloader import MediaDownloaderCommand
 from src.config.logger import get_logger
 
 logger = get_logger()
@@ -18,6 +19,7 @@ class BotHandlers:
         self.start_command = StartCommand()
         self.help_command = HelpCommand()
         self.emoji_cropper_command = EmojiCropperCommand()
+        self.media_downloader = MediaDownloaderCommand()
         logger.info("BotHandlers initialized successfully")
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -55,6 +57,40 @@ class BotHandlers:
         user_id = update.effective_user.id if update.effective_user else "Unknown"
         logger.info(f"User {user_id} executed /emoji_cropper command")
         await self.emoji_cropper_command.start(update, context)
+
+    async def handle_media_link(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Handle private text messages with media links.
+
+        Args:
+            update: Telegram update object
+            context: Context for the handler
+        """
+        user_id = update.effective_user.id if update.effective_user else "Unknown"
+        logger.info(f"User {user_id} sent private message, routing to media downloader")
+        await self.media_downloader.handle(update, context)
+
+    async def handle_media_quality(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Handle quality choice callbacks for pending YouTube links.
+
+        Args:
+            update: Telegram update object
+            context: Context for the handler
+        """
+        user_id = update.callback_query.from_user.id if update.callback_query else "Unknown"
+        logger.info(f"User {user_id} sent quality callback, routing to media downloader")
+        await self.media_downloader.handle_quality(update, context)
+
+    async def track_emoji_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Track private messages containing custom emojis.
+
+        Args:
+            update: Telegram update object
+            context: Context for the handler
+        """
+        await self.media_downloader.track_emoji_message(update, context)
 
     async def handle_photo(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
