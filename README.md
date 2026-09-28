@@ -94,7 +94,7 @@ Instagram требует авторизацию:
 - `MEDIA_MAX_FILE_MB` — максимальный размер одного файла/части видео в МБ (по умолчанию 1900 с Local Bot API, в стандартном режиме бот сам урезает до 48)
 - `MEDIA_MAX_PARTS` — максимальное число частей видео для отправки (по умолчанию 40)
 - `MEDIA_IG_COOKIES_FILE` — путь к cookies-файлу Instagram
-- `MEDIA_YT_PLAYER_CLIENT` — player client для YouTube (по умолчанию `android`)
+- `MEDIA_YT_PLAYER_CLIENT` — player client для YouTube (по умолчанию `embedded`, который отдаёт доступные высокие разрешения)
 
 Бот скачивает видео любого размера (до 10 часов). Если файл больше `MEDIA_MAX_FILE_MB`, он без перекодирования режется на части (ffmpeg `-c copy`) и отправляется отдельными документами.
 

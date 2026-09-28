@@ -3,7 +3,7 @@
 ## Media downloader (src/media/)
 
 - Extractors rot when platforms change: bump `yt-dlp[default]` and `gallery-dl` pins in requirements.txt, rebuild image (`docker compose build --no-cache`).
-- YouTube needs `MEDIA_YT_PLAYER_CLIENT=android` default; web clients hit SABR errors (yt-dlp issue #12482).
+- YouTube needs `MEDIA_YT_PLAYER_CLIENT=embedded` default: on the checked production URL, `android` exposed only 360p while `embedded` exposed/downloaded H.264 480p, 720p and 1080p with the bgutil PO token provider.
 - Instagram requires cookies (`MEDIA_IG_COOKIES_FILE`); without them bot returns auth error by design.
 - VK extractor must be smoke-tested inside the production container; local macOS LibreSSL gives false TLS failures.
 - All user-facing strings live in src/config/strings.py; media settings in src/config/settings.py via env.

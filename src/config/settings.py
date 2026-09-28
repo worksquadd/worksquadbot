@@ -18,7 +18,7 @@ class Settings:
     MEDIA_DOWNLOAD_TIMEOUT_SEC: int = int(os.getenv("MEDIA_DOWNLOAD_TIMEOUT_SEC", "3600"))
     MEDIA_MAX_FILE_MB: int = min(1900, max(10, int(os.getenv("MEDIA_MAX_FILE_MB", "1900"))))
     MEDIA_IG_COOKIES_FILE: str = os.getenv("MEDIA_IG_COOKIES_FILE", "/app/ig-cookies.txt")
-    MEDIA_YT_PLAYER_CLIENT: str = os.getenv("MEDIA_YT_PLAYER_CLIENT", "android")
+    MEDIA_YT_PLAYER_CLIENT: str = os.getenv("MEDIA_YT_PLAYER_CLIENT", "embedded")
     MEDIA_YT_POT_BASEURL: str = os.getenv("MEDIA_YT_POT_BASEURL", "http://bgutil:4416")
     MEDIA_MAX_PARTS: int = int(os.getenv("MEDIA_MAX_PARTS", "40"))
     MEDIA_CONCURRENT_PER_USER: int = int(os.getenv("MEDIA_CONCURRENT_PER_USER", "16"))
